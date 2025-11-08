@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>リアルタイム行動認識</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+  <h1 class="text-2xl font-bold mb-4">📱 リアルタイム行動認識</h1>
+  <div id="status" class="text-lg text-blue-700 font-semibold mb-2">センサ取得待機中...</div>
+  <div id="result" class="text-3xl font-bold text-green-600">---</div>
+
+  <script>
+    let accX = [], accY = [], accZ = [];
+
+    async function sendData() {
+      if (accX.length < 20) return; // 十分なデータが溜まってから送信
+
+      const payload = { AccX: accX, AccY: accY, AccZ: accZ };
+      accX = []; accY = []; accZ = [];
+
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      document.getElementById("result").textContent = "行動状態: " + data.prediction;
+    }
+
+    if (window.DeviceMotionEvent) {
+      document.getElementById("status").textContent = "📲 スマホを動かしてください！";
+      window.addEventListener("devicemotion", (event) => {
+        accX.push(event.acceleration.x || 0);
+        accY.push(event.acceleration.y || 0);
+        accZ.push(event.acceleration.z || 0);
+      });
+      setInterval(sendData, 1000); // 1秒ごとに送信
+    } else {
+      document.getElementById("status").textContent = "❌ このデバイスは加速度センサに非対応です。";
+    }
+  </script>
+</body>
+</html>
